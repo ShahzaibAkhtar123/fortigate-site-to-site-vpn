@@ -1,0 +1,826 @@
+📖 FortiGate Site-to-Site IPsec VPN - Complete GUI Configuration Guide
+Document Information
+Item	Details
+Project	Site-to-Site IPsec VPN between two FortiGate firewalls
+VPN Type	Route-Based IPsec (IKEv1)
+Interface Naming	FW1: to-forti-2 / FW2: to-fort-1
+Date	[Insert Current Date]
+Network Topology
+text
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                     │
+│   PC1                    FW1                       FW2                    PC2      │
+│ Ubuntu              FortiGate-VM               FortiGate-VM              Ubuntu     │
+│ 10.10.10.2              Site A                     Site B               10.20.0.2   │
+│    │                       │                         │                      │       │
+│    │    ┌──────────────┐   │   ┌──────────────┐      │   ┌──────────────┐   │       │
+│    └────│   port1      │   │   │   port2      │      │   │   port1      │───┘       │
+│         │ 10.10.10.1   │   │   │ 10.10.30.5   │      │   │ 10.20.0.1    │           │
+│         │   LAN        │   │   │   WAN        │      │   │   LAN        │           │
+│         └──────────────┘   │   └──────────────┘      │   └──────────────┘           │
+│                            │                         │                              │
+│                            │   ════════════════      │                              │
+│                            │   IPsec VPN Tunnel      │                              │
+│                            │   to-forti-2 ←──────────→ to-fort-1                    │
+│                            │                         │                              │
+│                            └─────────────────────────┘                              │
+│                                                                                     │
+│   Local Subnet: 10.10.10.0/24                    Remote Subnet: 10.20.0.0/24        │
+│                                                                                     │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+Prerequisites
+Before starting, ensure you have:
+
+Item	FW1 (Site A)	FW2 (Site B)
+Web Browser	Firefox / Chrome / Edge	Firefox / Chrome / Edge
+Management Access	https://10.10.10.1 or https://10.10.30.5	https://10.20.0.1 or https://10.10.30.6
+Admin Credentials	Username and Password	Username and Password
+Network Connectivity	Both firewalls must reach each other's WAN IP	Both firewalls must reach each other's WAN IP
+Part 1: FW1 Configuration (Site A - to-forti-2)
+Step 1.1: Login to FW1
+text
+1. Open your web browser
+2. Type: https://10.10.10.1 (or https://10.10.30.5)
+3. Click "Advanced" → "Proceed to site (unsafe)"
+4. Enter your admin username and password
+5. Click "Login"
+
+Expected Screen:
+┌─────────────────────────────────────────────────────────────────┐
+│                      FortiGate Login                            │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │ Username: [admin                    ]                   │    │
+│  │ Password: [                         ]                   │    │
+│  │                                         [ Login ]        │    │
+│  └─────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────┘
+Step 1.2: Configure LAN Interface (port1)
+Navigation Path: Network → Interfaces
+
+text
+1. Click "Network" in the top menu
+2. Click "Interfaces" from the dropdown
+3. Locate "port1" in the interface list
+4. Click the "Edit" (pencil icon) on the port1 row
+Configuration Window - Fill as follows:
+
+text
+┌─────────────────────────────────────────────────────────────────┐
+│ Edit Interface - port1                                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Name: port1                                                   │
+│   Type: Physical                                                │
+│   Alias: (Optional: LAN)                                        │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Role: [LAN ▼]                                                 │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Addressing mode: [Static ▼]                                   │
+│   IP/Netmask: [10.10.10.1    ] [255.255.255.0 ▼]                │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Administrative Access:                                        │
+│   ☑ HTTPS  ☑ HTTP  ☑ PING  ☑ SSH  ☐ SNMP  ☐ TELNET             │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   DHCP Server:                                                  │
+│   ○ Disable                                                     │
+│   ● Enable                                                      │
+│                                                                 │
+│   DHCP Server Settings:                                         │
+│   Default Gateway: [10.10.10.1           ]                      │
+│   Netmask: [255.255.255.0                ]                      │
+│   IP Range: [10.10.10.100    ] to [10.10.10.200   ]             │
+│   DNS Server 1: [8.8.8.8                 ]                      │
+│   DNS Server 2: [8.8.4.4                 ]                      │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│                                    [ Cancel ]  [ OK ]           │
+└─────────────────────────────────────────────────────────────────┘
+After configuration, verify port1 shows:
+
+Status: UP (Green arrow)
+
+IP: 10.10.10.1/24
+
+Role: LAN
+
+Step 1.3: Configure WAN Interface (port2)
+Navigation Path: Network → Interfaces
+
+text
+1. Click "Network" → "Interfaces"
+2. Locate "port2" in the interface list
+3. Click the "Edit" (pencil icon) on the port2 row
+Configuration Window - Fill as follows:
+
+text
+┌─────────────────────────────────────────────────────────────────┐
+│ Edit Interface - port2                                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Name: port2                                                   │
+│   Type: Physical                                                │
+│   Alias: (Optional: WAN)                                        │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Role: [WAN ▼]                                                 │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Addressing mode: [Static ▼]                                   │
+│   IP/Netmask: [10.10.30.5     ] [255.255.255.252 ▼]             │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Administrative Access:                                        │
+│   ☑ HTTPS  ☐ HTTP  ☑ PING  ☐ SSH  ☐ SNMP  ☐ TELNET             │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Estimated Bandwidth (kbps):                                   │
+│   Upstream: [100000    ]  (100 Mbps)                            │
+│   Downstream: [100000  ]  (100 Mbps)                            │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│                                    [ Cancel ]  [ OK ]           │
+└─────────────────────────────────────────────────────────────────┘
+After configuration, verify port2 shows:
+
+Status: UP (Green arrow)
+
+IP: 10.10.30.5/30
+
+Role: WAN
+
+Step 1.4: Create IPsec VPN Tunnel (Phase 1)
+Navigation Path: VPN → IPsec Tunnels
+
+text
+1. Click "VPN" in the top menu
+2. Click "IPsec Tunnels" from the dropdown
+3. Click "Create New" button
+4. Select "IPsec Interface" (for route-based VPN)
+5. Click "Next"
+Step 1.4.1: Tunnel Name
+
+text
+┌─────────────────────────────────────────────────────────────────┐
+│ New IPsec Tunnel - Step 1 of 4                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Name: [to-forti-2                    ]                        │
+│                                                                 │
+│   Template Type:                                                │
+│   ○ Custom                                                      │
+│   ● Site-to-Site                                                │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   NAT Configuration:                                            │
+│   ☐ This site is behind NAT                                     │
+│                                                                 │
+│                                    [ Cancel ]  [ Next ]         │
+└─────────────────────────────────────────────────────────────────┘
+Step 1.4.2: Phase 1 (IKE Gateway) Configuration
+
+text
+┌─────────────────────────────────────────────────────────────────┐
+│ New IPsec Tunnel - Step 2 of 4 - Phase 1                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Remote Gateway:                                               │
+│   [10.10.30.6                    ]                              │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Local Interface:                                              │
+│   [port2 ▼]                                                     │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Mode: [Main Mode ▼]                                           │
+│   IKE Version: [1 ▼]                                            │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Pre-shared Key:                                               │
+│   [••••••••••••••••            ]                                │
+│   Confirm Key:   [••••••••••••••••            ]                 │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Authentication Method: [Pre-shared Key ▼]                     │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Phase 1 Proposal:                                             │
+│   Encryption: [DES ▼]                                           │
+│   Authentication: [MD5 ▼]                                       │
+│   DH Group: [2 ▼]                                               │
+│   Key Lifetime: [86400   ] seconds                              │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Dead Peer Detection:                                          │
+│   [On-Demand ▼]                                                 │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Advanced:                                                     │
+│   ☐ Enable NAT Traversal                                        │
+│   ☐ Interface IP as Local Gateway                               │
+│                                                                 │
+│                                    [ Back ]  [ Next ]           │
+└─────────────────────────────────────────────────────────────────┘
+Step 1.4.3: Phase 2 (IPsec SA) Configuration
+
+text
+┌─────────────────────────────────────────────────────────────────┐
+│ New IPsec Tunnel - Step 3 of 4 - Phase 2                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Name: [to-forti-2                    ]                        │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Local Address:                                                │
+│   Type: [Subnet ▼]                                              │
+│   IP:     [10.10.10.0     ]                                      │
+│   Netmask: [255.255.255.0 ▼]                                    │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Remote Address:                                               │
+│   Type: [Subnet ▼]                                              │
+│   IP:     [10.20.0.0      ]                                      │
+│   Netmask: [255.255.255.0 ▼]                                    │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Phase 2 Proposal:                                             │
+│   Encryption: [DES ▼]                                           │
+│   Authentication: [MD5 ▼]                                       │
+│   DH Group: [2 ▼]                                               │
+│   Key Lifetime: [3600    ] seconds                              │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Advanced:                                                     │
+│   ☑ Enable Replay Detection                                     │
+│   ☑ Auto-negotiate                                              │
+│                                                                 │
+│                                    [ Back ]  [ Next ]           │
+└─────────────────────────────────────────────────────────────────┘
+Step 1.4.4: Summary and Create
+
+text
+┌─────────────────────────────────────────────────────────────────┐
+│ New IPsec Tunnel - Step 4 of 4 - Summary                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Review your configuration:                                    │
+│                                                                 │
+│   Tunnel Name: to-forti-2                                       │
+│   Remote Gateway: 10.10.30.6                                    │
+│   Local Interface: port2 (10.10.30.5)                           │
+│   Authentication: Pre-shared Key                                │
+│   Phase 1: DES-MD5-DH2, Lifetime: 86400                         │
+│   Phase 2: DES-MD5-DH2, Lifetime: 3600                          │
+│   Local Subnet: 10.10.10.0/24                                   │
+│   Remote Subnet: 10.20.0.0/24                                   │
+│                                                                 │
+│   ☑ Automatically add static route                              │
+│   ☑ Create firewall policies                                    │
+│                                                                 │
+│                                    [ Back ]  [ Create ]          │
+└─────────────────────────────────────────────────────────────────┘
+Click "Create" to finish tunnel creation.
+
+Step 1.5: Verify Tunnel Created
+Navigation Path: VPN → IPsec Tunnels
+
+text
+After creation, you should see:
+
+┌─────────────────────────────────────────────────────────────────┐
+│ IPsec Tunnels                                                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Name           Status    Local IP    Remote IP    References  │
+│   ───────────────────────────────────────────────────────────── │
+│   to-forti-2     Up        10.10.30.5  10.10.30.6   2           │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+Step 1.6: Review Firewall Policies Created
+Navigation Path: Policy & Objects → Firewall Policy
+
+text
+The VPN wizard automatically created policies. They should look like:
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ Firewall Policy                                                                 │
+├────────────┬──────────────┬──────────────┬──────────┬──────────┬───────────────┤
+│ Name       │ Incoming Intf │ Outgoing Intf│ Source   │ Dest     │ Action        │
+├────────────┼──────────────┼──────────────┼──────────┼──────────┼───────────────┤
+│ LAN-to-VPN │ port1        │ to-forti-2   │ all      │ all      │ ACCEPT        │
+│ VPN-to-LAN │ to-forti-2   │ port1        │ all      │ all      │ ACCEPT        │
+└────────────┴──────────────┴──────────────┴──────────┴──────────┴───────────────┘
+Step 1.7: Verify No NAT on VPN Policies (Critical!)
+Navigation Path: Policy & Objects → Firewall Policy
+
+text
+1. Click "Edit" on the "LAN-to-VPN" policy
+2. Scroll down to "Advanced Options"
+3. Expand "Advanced Options" section
+Check NAT setting:
+
+text
+┌─────────────────────────────────────────────────────────────────┐
+│ Edit Firewall Policy - LAN-to-VPN                               │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   ... (previous settings) ...                                   │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Advanced Options: (Expand to view)                            │
+│                                                                 │
+│   NAT:                                                          │
+│   ○ Use Outbound Interface Address                              │
+│   ● No NAT (Keep Source IP)  ← MUST BE SELECTED                 │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Logging:                                                      │
+│   ☑ Enable Logging                                              │
+│                                                                 │
+│                                    [ Cancel ]  [ OK ]           │
+└─────────────────────────────────────────────────────────────────┘
+Repeat for "VPN-to-LAN" policy - ensure NAT is DISABLED.
+
+Part 2: FW2 Configuration (Site B - to-fort-1)
+Step 2.1: Login to FW2
+text
+1. Open a new browser tab
+2. Type: https://10.20.0.1 (or https://10.10.30.6)
+3. Enter your admin username and password
+4. Click "Login"
+Step 2.2: Configure LAN Interface (port1)
+Navigation Path: Network → Interfaces
+
+text
+1. Click "Network" → "Interfaces"
+2. Locate "port1" and click "Edit" (pencil icon)
+Configuration Window - Fill as follows:
+
+text
+┌─────────────────────────────────────────────────────────────────┐
+│ Edit Interface - port1                                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Name: port1                                                   │
+│   Type: Physical                                                │
+│   Alias: (Optional: LAN)                                        │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Role: [LAN ▼]                                                 │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Addressing mode: [Static ▼]                                   │
+│   IP/Netmask: [10.20.0.1     ] [255.255.255.0 ▼]                │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Administrative Access:                                        │
+│   ☑ HTTPS  ☑ HTTP  ☑ PING  ☑ SSH                               │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   DHCP Server:                                                  │
+│   ● Enable                                                      │
+│                                                                 │
+│   DHCP Server Settings:                                         │
+│   Default Gateway: [10.20.0.1           ]                       │
+│   IP Range: [10.20.0.100    ] to [10.20.0.200   ]               │
+│   DNS Server 1: [8.8.8.8                 ]                      │
+│   DNS Server 2: [8.8.4.4                 ]                      │
+│                                                                 │
+│                                    [ Cancel ]  [ OK ]           │
+└─────────────────────────────────────────────────────────────────┘
+Step 2.3: Configure WAN Interface (port2)
+Navigation Path: Network → Interfaces
+
+text
+1. Click "Network" → "Interfaces"
+2. Locate "port2" and click "Edit" (pencil icon)
+Configuration Window - Fill as follows:
+
+text
+┌─────────────────────────────────────────────────────────────────┐
+│ Edit Interface - port2                                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Name: port2                                                   │
+│   Type: Physical                                                │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Role: [WAN ▼]                                                 │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Addressing mode: [Static ▼]                                   │
+│   IP/Netmask: [10.10.30.6     ] [255.255.255.252 ▼]             │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Administrative Access:                                        │
+│   ☑ HTTPS  ☐ HTTP  ☑ PING                                      │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Estimated Bandwidth:                                          │
+│   Upstream: [100000    ]  Downstream: [100000    ]              │
+│                                                                 │
+│                                    [ Cancel ]  [ OK ]           │
+└─────────────────────────────────────────────────────────────────┘
+Step 2.4: Create IPsec VPN Tunnel (Phase 1)
+Navigation Path: VPN → IPsec Tunnels
+
+text
+1. Click "VPN" → "IPsec Tunnels"
+2. Click "Create New" button
+3. Select "IPsec Interface"
+4. Click "Next"
+Step 2.4.1: Tunnel Name
+
+text
+┌─────────────────────────────────────────────────────────────────┐
+│ New IPsec Tunnel - Step 1 of 4                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Name: [to-fort-1                     ]                        │
+│                                                                 │
+│   Template Type:                                                │
+│   ● Site-to-Site                                                │
+│                                                                 │
+│   NAT Configuration:                                            │
+│   ☐ This site is behind NAT                                     │
+│                                                                 │
+│                                    [ Cancel ]  [ Next ]         │
+└─────────────────────────────────────────────────────────────────┘
+Step 2.4.2: Phase 1 (IKE Gateway) Configuration
+
+text
+┌─────────────────────────────────────────────────────────────────┐
+│ New IPsec Tunnel - Step 2 of 4 - Phase 1                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Remote Gateway:                                               │
+│   [10.10.30.5                    ]                              │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Local Interface:                                              │
+│   [port2 ▼]                                                     │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Mode: [Main Mode ▼]                                           │
+│   IKE Version: [1 ▼]                                            │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Pre-shared Key:                                               │
+│   [••••••••••••••••            ]  (SAME KEY AS FW1)             │
+│   Confirm Key:   [••••••••••••••••            ]                 │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Phase 1 Proposal:                                             │
+│   Encryption: [DES ▼]   Authentication: [MD5 ▼]  DH Group: [2 ▼]│
+│   Key Lifetime: [86400   ] seconds                              │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Dead Peer Detection: [On-Demand ▼]                            │
+│                                                                 │
+│                                    [ Back ]  [ Next ]           │
+└─────────────────────────────────────────────────────────────────┘
+Step 2.4.3: Phase 2 (IPsec SA) Configuration
+
+text
+┌─────────────────────────────────────────────────────────────────┐
+│ New IPsec Tunnel - Step 3 of 4 - Phase 2                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Name: [to-fort-1                     ]                        │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Local Address:                                                │
+│   Type: [Subnet ▼]                                              │
+│   IP:     [10.20.0.0      ]                                      │
+│   Netmask: [255.255.255.0 ▼]                                    │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Remote Address:                                               │
+│   Type: [Subnet ▼]                                              │
+│   IP:     [10.10.10.0     ]                                      │
+│   Netmask: [255.255.255.0 ▼]                                    │
+│                                                                 │
+│   ───────────────────────────────────────────────────────────── │
+│   Phase 2 Proposal:                                             │
+│   Encryption: [DES ▼]   Authentication: [MD5 ▼]  DH Group: [2 ▼]│
+│   Key Lifetime: [3600    ] seconds                              │
+│                                                                 │
+│                                    [ Back ]  [ Next ]           │
+└─────────────────────────────────────────────────────────────────┘
+Step 2.4.4: Summary and Create
+
+text
+┌─────────────────────────────────────────────────────────────────┐
+│ New IPsec Tunnel - Step 4 of 4 - Summary                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Review your configuration:                                    │
+│                                                                 │
+│   Tunnel Name: to-fort-1                                        │
+│   Remote Gateway: 10.10.30.5                                    │
+│   Local Interface: port2 (10.10.30.6)                           │
+│   Authentication: Pre-shared Key (same as FW1)                  │
+│   Local Subnet: 10.20.0.0/24                                    │
+│   Remote Subnet: 10.10.10.0/24                                  │
+│                                                                 │
+│   ☑ Automatically add static route                              │
+│   ☑ Create firewall policies                                    │
+│                                                                 │
+│                                    [ Back ]  [ Create ]          │
+└─────────────────────────────────────────────────────────────────┘
+Click "Create" to finish.
+
+Step 2.5: Verify Tunnel Status
+Navigation Path: VPN → IPsec Tunnels
+
+text
+┌─────────────────────────────────────────────────────────────────┐
+│ IPsec Tunnels                                                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Name        Status    Local IP     Remote IP    References    │
+│   ───────────────────────────────────────────────────────────── │
+│   to-fort-1   Up        10.10.30.6   10.10.30.5   2             │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+If status shows "Down", wait 10 seconds and click "Refresh" or click "Bring Up".
+
+Step 2.6: Verify NAT is Disabled on Policies
+Navigation Path: Policy & Objects → Firewall Policy
+
+text
+1. Click "Edit" on the LAN-to-VPN policy
+2. Expand "Advanced Options"
+3. Verify "No NAT (Keep Source IP)" is selected
+4. Click "OK"
+5. Repeat for VPN-to-LAN policy
+Part 3: Ubuntu Client Configuration
+Step 3.1: Configure PC1 (Behind FW1 - IP: 10.10.10.2)
+Open Terminal on Ubuntu PC1:
+
+text
+1. Press Ctrl+Alt+T to open terminal
+2. Check current IP address:
+   ip addr show
+3. Add route to remote network:
+   sudo ip route add 10.20.0.0/24 via 10.10.10.1
+4. Verify route was added:
+   ip route show
+Expected output:
+
+text
+default via 10.10.10.1 dev eth0
+10.10.10.0/24 dev eth0 proto kernel scope link src 10.10.10.2
+10.20.0.0/24 via 10.10.10.1 dev eth0
+To make route permanent (Netplan method):
+
+text
+1. Find netplan config file:
+   ls /etc/netplan/
+   (example: 01-netcfg.yaml or 00-installer-config.yaml)
+
+2. Edit the file:
+   sudo nano /etc/netplan/01-netcfg.yaml
+
+3. Add routes section under your interface:
+yaml
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    eth0:
+      addresses:
+        - 10.10.10.2/24
+      gateway4: 10.10.10.1
+      nameservers:
+        addresses: [8.8.8.8, 8.8.4.4]
+      routes:
+        - to: 10.20.0.0/24
+          via: 10.10.10.1
+text
+4. Save file (Ctrl+X, then Y, then Enter)
+5. Apply configuration:
+   sudo netplan apply
+6. Verify route persists:
+   ip route show
+Step 3.2: Configure PC2 (Behind FW2 - IP: 10.20.0.2)
+Open Terminal on Ubuntu PC2:
+
+text
+1. Press Ctrl+Alt+T to open terminal
+2. Add route to remote network:
+   sudo ip route add 10.10.10.0/24 via 10.20.0.1
+3. Verify route was added:
+   ip route show
+Expected output:
+
+text
+default via 10.20.0.1 dev eth0
+10.10.10.0/24 via 10.20.0.1 dev eth0
+10.20.0.0/24 dev eth0 proto kernel scope link src 10.20.0.2
+To make route permanent (Netplan method):
+
+text
+1. Edit netplan config:
+   sudo nano /etc/netplan/01-netcfg.yaml
+
+2. Add routes section:
+yaml
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    eth0:
+      addresses:
+        - 10.20.0.2/24
+      gateway4: 10.20.0.1
+      nameservers:
+        addresses: [8.8.8.8, 8.8.4.4]
+      routes:
+        - to: 10.10.10.0/24
+          via: 10.20.0.1
+text
+3. Save and apply:
+   sudo netplan apply
+Step 3.3: Disable Ubuntu Firewall (for testing only)
+If ping fails, temporarily disable UFW:
+
+text
+# Check status
+sudo ufw status
+
+# Disable for testing
+sudo ufw disable
+
+# Test ping again
+ping 10.20.0.2 (from PC1) or ping 10.10.10.2 (from PC2)
+
+# Re-enable after testing
+sudo ufw enable
+
+# Or allow ICMP through firewall
+sudo ufw allow proto icmp from 10.10.10.0/24 to any
+Part 4: Verification
+Step 4.1: Dashboard Verification
+Navigation Path: Dashboard → Network
+
+text
+On both firewalls, check the IPsec widget:
+
+┌─────────────────────────────────────────────────────────────────┐
+│ IPsec                                                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Tunnel Name    Status    Uptime      RX Traffic   TX Traffic  │
+│   ───────────────────────────────────────────────────────────── │
+│   to-forti-2     ● Up      00:15:23    1.2 MB       856 KB      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+Step 4.2: Test from Firewall CLI
+On FW1 (via GUI Console or SSH):
+
+Navigation Path: Dashboard → CLI Console (if available) or use SSH
+
+text
+# Test ping to FW2 LAN
+execute ping 10.20.0.1
+
+Expected Output:
+PING 10.20.0.1 (10.20.0.1): 56 data bytes
+64 bytes from 10.20.0.1: icmp_seq=0 ttl=255 time=2.5 ms
+64 bytes from 10.20.0.1: icmp_seq=1 ttl=255 time=2.3 ms
+On FW2:
+
+text
+# Test ping to FW1 LAN
+execute ping 10.10.10.1
+
+Expected Output:
+PING 10.10.10.1 (10.10.10.1): 56 data bytes
+64 bytes from 10.10.10.1: icmp_seq=0 ttl=255 time=2.4 ms
+Step 4.3: Test from Ubuntu PCs
+On PC1 (10.10.10.2):
+
+bash
+ping 10.20.0.1
+ping 10.20.0.2
+On PC2 (10.20.0.2):
+
+bash
+ping 10.10.10.1
+ping 10.10.10.2
+Successful Output:
+
+text
+PING 10.20.0.2 (10.20.0.2) 56(84) bytes of data.
+64 bytes from 10.20.0.2: icmp_seq=1 ttl=62 time=2.34 ms
+64 bytes from 10.20.0.2: icmp_seq=2 ttl=62 time=2.28 ms
+Part 5: Troubleshooting
+Issue 1: Tunnel Status Shows "Down"
+Navigation Path: VPN → IPsec Tunnels
+
+text
+Solution:
+1. Click "Edit" on the tunnel
+2. Click "Bring Up" button
+3. Wait 10 seconds
+4. Click "Refresh"
+Issue 2: Phase 1 Down (IKE Gateway)
+Navigation Path: Dashboard → CLI Console
+
+bash
+# Run this command
+diagnose vpn ike gateway list
+If you see "connecting" or nothing:
+
+Possible Cause	Solution
+Wrong Pre-shared Key	Verify both sides have identical PSK
+Remote Gateway IP wrong	Check remote-gw matches other side's WAN IP
+UDP 500 blocked	Ensure no firewall blocks UDP 500
+Interface not up	Check port2 status is "UP"
+Issue 3: Tunnel Up But No Ping
+Step A: Check Routes on FortiGate
+
+Navigation Path: Dashboard → CLI Console
+
+bash
+get router info routing-table all
+Look for:
+
+text
+S       10.20.0.0/24 [10/0] via to-forti-2 tunnel
+If missing, add route:
+
+Navigation Path: Network → Static Routes
+
+text
+1. Click "Create New"
+2. Destination IP: 10.20.0.0
+3. Netmask: 255.255.255.0
+4. Interface: to-forti-2
+5. Click "OK"
+Step B: Check Firewall Policies
+
+Navigation Path: Policy & Objects → Firewall Policy
+
+text
+Verify these policies exist in this order:
+1. LAN-to-VPN (port1 → to-forti-2) - Action: ACCEPT
+2. VPN-to-LAN (to-forti-2 → port1) - Action: ACCEPT
+Step C: Check NAT is Disabled
+
+Navigation Path: Policy & Objects → Firewall Policy
+
+text
+1. Edit LAN-to-VPN policy
+2. Expand "Advanced Options"
+3. Verify "No NAT (Keep Source IP)" is selected
+Step D: Check Ubuntu Routes
+
+bash
+ip route show
+Expected on PC1:
+
+text
+10.20.0.0/24 via 10.10.10.1 dev eth0
+If missing, add:
+
+bash
+sudo ip route add 10.20.0.0/24 via 10.10.10.1
+Issue 4: Ping Works from Firewall but Not from PC
+text
+Solution:
+1. Ubuntu PC missing route - add it (see Step D above)
+2. Ubuntu firewall blocking - run: sudo ufw disable
+3. NAT still enabled on policy - disable it
+Issue 5: No Traffic After Adding Routes
+Capture traffic on FW1:
+
+Navigation Path: Dashboard → CLI Console
+
+bash
+diagnose sniffer packet port1 "icmp" 4
+While pinging from PC1, you should see:
+
+text
+10.10.10.2 -> 10.20.0.2: icmp: echo request
+10.20.0.2 -> 10.10.10.2: icmp: echo reply
+If you see only requests, no replies:
+
+Check FW2 policies
+
+Check return route on FW2
+
+Check Ubuntu PC2 route
+
+Part 6: Quick Reference Card
+Menu Navigation Summary
+Task	Navigation Path
+Configure Interfaces	Network → Interfaces
+Create IPsec Tunnel	VPN → IPsec Tunnels → Create New
+Add Static Route	Network → Static Routes
+View Firewall Policies	Policy & Objects → Firewall Policy
+Check Tunnel Status	VPN → IPsec
