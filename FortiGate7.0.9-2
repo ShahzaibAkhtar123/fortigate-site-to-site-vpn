@@ -1,0 +1,242 @@
+# =============================================================================
+# FORTIGATE FW2 (to-fort-1) - COMPLETE VPN CONFIGURATION
+# =============================================================================
+# Device: FortiGate-VM64-KVM
+# Tunnel Name: to-fort-1
+# WAN IP: 10.10.30.6/30
+# LAN IP: 10.20.0.1/24
+# Remote WAN: 10.10.30.5
+# Remote LAN: 10.10.10.0/24
+# Date: [Current Date]
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# SECTION 1: INTERFACE CONFIGURATION
+# -----------------------------------------------------------------------------
+
+# Configure LAN Interface (port1)
+config system interface
+    edit "port1"
+        set vdom "root"
+        set mode static
+        set ip 10.20.0.1 255.255.255.0
+        set allowaccess ping https http ssh
+        set type physical
+        set snmp-index 1
+        set status up
+    next
+end
+
+# Configure WAN Interface (port2)
+config system interface
+    edit "port2"
+        set vdom "root"
+        set mode static
+        set ip 10.10.30.6 255.255.255.252
+        set allowaccess ping https http ssh
+        set type physical
+        set snmp-index 2
+        set status up
+    next
+end
+
+# -----------------------------------------------------------------------------
+# SECTION 2: IPsec PHASE 1 (IKE GATEWAY)
+# -----------------------------------------------------------------------------
+# Purpose: Establishes secure control channel between firewalls
+# Protocol: IKEv1, UDP port 500
+# -----------------------------------------------------------------------------
+
+config vpn ipsec phase1-interface
+    edit "to-fort-1"
+        set interface "port2"
+        set iketype version1
+        set keylife 86400
+        set peertype any
+        set proposal des-md5
+        set dpd on-demand
+        set dhgrp 2
+        set nattraversal disable
+        set local-gw 10.10.30.6
+        set remote-gw 10.10.30.5
+        set psksecret "YOUR_PRE_SHARED_KEY_HERE"
+    next
+end
+
+# -----------------------------------------------------------------------------
+# SECTION 3: IPsec PHASE 2 (IPsec SA - DATA TUNNEL)
+# -----------------------------------------------------------------------------
+# Purpose: Establishes encrypted data tunnel
+# Protocol: ESP (IP protocol 50)
+# -----------------------------------------------------------------------------
+
+config vpn ipsec phase2-interface
+    edit "to-fort-1"
+        set phase1name "to-fort-1"
+        set proposal des-md5
+        set dhgrp 2
+        set keylifeseconds 3600
+        set src-addr-type subnet
+        set src-subnet 10.20.0.0 255.255.255.0
+        set dst-addr-type subnet
+        set dst-subnet 10.10.10.0 255.255.255.0
+        set auto-negotiate enable
+        set replay enable
+    next
+end
+
+# -----------------------------------------------------------------------------
+# SECTION 4: STATIC ROUTES
+# -----------------------------------------------------------------------------
+# Purpose: Tells firewall how to reach remote network via tunnel
+# -----------------------------------------------------------------------------
+
+config router static
+    edit 1
+        set dst 10.10.10.0 255.255.255.0
+        set device "to-fort-1"
+        set distance 10
+        set priority 1
+    next
+    edit 2
+        set dst 0.0.0.0 0.0.0.0
+        set gateway 10.10.30.5
+        set device "port2"
+        set distance 10
+        set priority 1
+    next
+end
+
+# -----------------------------------------------------------------------------
+# SECTION 5: FIREWALL POLICIES
+# -----------------------------------------------------------------------------
+# Purpose: Allows traffic to flow through the tunnel
+# IMPORTANT: NAT must be DISABLED for VPN traffic
+# -----------------------------------------------------------------------------
+
+# Policy 1: Allow LAN to VPN tunnel (outbound traffic)
+config firewall policy
+    edit 1
+        set name "LAN-to-VPN-Tunnel"
+        set uuid 00000000-0000-0000-0000-000000000001
+        set srcintf "port1"
+        set dstintf "to-fort-1"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+        set logtraffic all
+        set logtraffic-start enable
+        set nat disable
+        set comments "Allow LAN devices to access remote network via VPN"
+    next
+end
+
+# Policy 2: Allow VPN tunnel to LAN (inbound traffic)
+config firewall policy
+    edit 2
+        set name "VPN-to-LAN-Tunnel"
+        set uuid 00000000-0000-0000-0000-000000000002
+        set srcintf "to-fort-1"
+        set dstintf "port1"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+        set logtraffic all
+        set logtraffic-start enable
+        set nat disable
+        set comments "Allow remote network to access LAN via VPN"
+    next
+end
+
+# -----------------------------------------------------------------------------
+# SECTION 6: DHCP SERVER CONFIGURATION (OPTIONAL)
+# -----------------------------------------------------------------------------
+# Purpose: Automatically assign IP addresses to LAN devices
+# -----------------------------------------------------------------------------
+
+config system dhcp server
+    edit 1
+        set interface "port1"
+        set default-gateway 10.20.0.1
+        set netmask 255.255.255.0
+        set timezone-option default
+        config ip-range
+            edit 1
+                set start-ip 10.20.0.100
+                set end-ip 10.20.0.200
+            next
+        end
+        set dns-server1 8.8.8.8
+        set dns-server2 8.8.4.4
+        set lease-time 86400
+    next
+end
+
+# -----------------------------------------------------------------------------
+# SECTION 7: VERIFICATION COMMANDS
+# =============================================================================
+# Run these commands to verify the tunnel is working correctly
+# =============================================================================
+
+# Check tunnel summary
+# get vpn ipsec tunnel summary
+
+# Check Phase 1 IKE gateway status
+# diagnose vpn ike gateway list
+
+# Check Phase 2 tunnel details
+# diagnose vpn tunnel list
+
+# Check routing table
+# get router info routing-table all
+
+# Check firewall policies
+# show firewall policy
+
+# Test connectivity to remote network
+# execute ping 10.10.10.1
+
+# Test connectivity to remote PC
+# execute ping 10.10.10.2
+
+# Capture live VPN traffic
+# diagnose sniffer packet to-fort-1 "icmp" 4
+
+# Debug flow trace
+# diagnose debug flow filter addr 10.20.0.2
+# diagnose debug flow trace start 99
+# diagnose debug enable
+
+# -----------------------------------------------------------------------------
+# SECTION 8: TROUBLESHOOTING COMMANDS
+# =============================================================================
+
+# Reset VPN tunnel if stuck
+# diagnose vpn tunnel reset to-fort-1
+
+# Restart IKE negotiation
+# diagnose vpn ike restart
+
+# Clear IKE gateways
+# diagnose vpn ike gateway clear
+
+# Check system logs for VPN errors
+# execute log filter category 14
+# execute log display
+
+# Packet capture on WAN interface
+# diagnose sniffer packet port2 "host 10.10.30.5" 4
+
+# Check MTU issues
+# diagnose netlink interface list to-fort-1
+
+# Check NPU offload status
+# diagnose npu ipsec status
+
+# -----------------------------------------------------------------------------
+# END OF CONFIGURATION FILE
+# =============================================================================
